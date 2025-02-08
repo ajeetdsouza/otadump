@@ -628,6 +628,7 @@ dependencies = [
  "sync-unsafe-cell",
  "tempfile",
  "zip",
+ "zstd",
 ]
 
 [[package]]

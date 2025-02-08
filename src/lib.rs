@@ -27,6 +27,7 @@ use sha2::{Digest as _, Sha256};
 use sync_unsafe_cell::SyncUnsafeCell;
 use zip::ZipArchive;
 use zip::result::ZipError;
+use zstd::Decoder as ZstdDecoder;
 
 pub use crate::payload::Payload;
 
@@ -341,6 +342,13 @@ impl Task<'_> {
                 let mut decoder = XzDecoder::new(data);
                 self.run_op_replace(&mut decoder, &mut dst_extents)
                     .context("Error in REPLACE_XZ operation")
+            }
+            Type::ReplaceZstd => {
+                let data = self.extract_data(op).context("Error extracting data")?;
+                let mut decoder =
+                    ZstdDecoder::new(data).context("Unable to initialize zstd decoder")?;
+                self.run_op_replace(&mut decoder, &mut dst_extents)
+                    .context("Error in REPLACE_ZSTD operation")
             }
             Type::Zero => Ok(()), // This is a no-op since the partition is already zeroed
             op => bail!("Unimplemented operation: {op:?}"),
