@@ -346,7 +346,7 @@ impl Task<'_> {
             Type::ReplaceZstd => {
                 let data = self.extract_data(op).context("Error extracting data")?;
                 let mut decoder =
-                    ZstdDecoder::new(data).context("Unable to initialize zstd decoder")?;
+                    ZstdDecoder::with_buffer(data).context("Unable to initialize zstd decoder")?;
                 self.run_op_replace(&mut decoder, &mut dst_extents)
                     .context("Error in REPLACE_ZSTD operation")
             }
