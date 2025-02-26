@@ -23,7 +23,7 @@ use liblzma::read::XzDecoder;
 use memmap2::{Mmap, MmapMut};
 use prost::Message as _;
 use rayon::{BroadcastContext, ThreadPoolBuilder};
-use sha2::{Digest as _, Sha256};
+use ring::digest;
 use sync_unsafe_cell::SyncUnsafeCell;
 use zip::ZipArchive;
 use zip::result::ZipError;
@@ -422,10 +422,11 @@ impl Task<'_> {
             return Ok(());
         };
 
-        let got_hash = Sha256::digest(data);
+        let got_hash = digest::digest(&digest::SHA256, data);
+        let got_hash = got_hash.as_ref();
         ensure!(
-            got_hash.as_slice() == exp_hash,
-            "Input verification failed: hash mismatch: expected {}, got {got_hash:x}",
+            got_hash == exp_hash,
+            "Input verification failed: hash mismatch: expected {}, got {got_hash:?}",
             hex::encode(exp_hash)
         );
         Ok(())
@@ -442,16 +443,17 @@ impl Task<'_> {
             return Ok(());
         };
 
-        let mut digest = Sha256::new();
+        let mut digest = digest::Context::new(&digest::SHA256);
         for chunk in unsafe { (*self.partition.get()).chunks(VERIFY_CHUNK_SIZE) } {
             digest.update(chunk);
             self.increment_progress();
         }
 
-        let got_hash = digest.finalize();
+        let got_hash = digest.finish();
+        let got_hash = got_hash.as_ref();
         ensure!(
-            got_hash.as_slice() == exp_hash,
-            "Output verification failed: hash mismatch: expected {}, got {got_hash:x}",
+            got_hash == exp_hash,
+            "Output verification failed: hash mismatch: expected {}, got {got_hash:?}",
             hex::encode(exp_hash)
         );
         Ok(())
